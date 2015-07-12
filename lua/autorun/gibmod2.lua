@@ -751,6 +751,10 @@ function GibMod_SpawnHeadcrab( ent, damageForce, damagePos )
 	
 	ragdoll:Spawn()
 	
+	if disablePlayerCollision:GetBool() then
+		ragdoll:SetCollisionGroup( COLLISION_GROUP_WEAPON )
+	end
+	
 	-- copy existing attributes
 	ragdoll:SetSkin( ent:GetSkin() )  
 	ragdoll:SetColor( ent:GetColor() )  
@@ -821,7 +825,7 @@ function GibMod_EntityTakeDamage( ent, dmginfo, force )
 	
 	-- attempt to solve incompatibilities
 	if ent:IsPlayer() and not force then return end
-	if ent:IsNPC() and not force then return end
+	--if ent:IsNPC() and not force then return end 		--breaks non-bullet damage
 	
 	local attacker = dmginfo:GetAttacker()
 	local damageAmt = dmginfo:GetDamage()
