@@ -126,6 +126,10 @@ local nonGibbableModels = {	-- partial model names to not explode or dismember
 							"dog",
 							"barnacle",
 							"furnituremattress",
+							"headcrab",
+							"crow",
+							"pigeon",
+							"seagull",
 						  }
 						  
 local bodyGibs = {	-- body gibs for full body explosion
@@ -160,6 +164,25 @@ end
 function GibMod_AddHeadGib( name )
 	table.insert( headGibs, name )
 end
+
+local function ccAddToList( ply, cmd, args )
+	if not ply:IsAdmin() then return end
+	
+	local list = args[1]
+	local arg = args[2]
+	if list == "ignored_entity" then
+		GibMod_AddIgnoredEntityName( arg )
+	elseif list == "ignored_model" then
+		GibMod_AddIgnoredModelString( arg )
+	elseif list == "bodygib" then
+		GibMod_AddBodyGib( arg )
+	elseif list == "headgib" then
+		GibMod_AddHeadGib( arg )
+	end
+	
+	ply:PrintMessage( HUD_PRINTCONSOLE, "added " .. arg .. " to " .. list )
+end
+concommand.Add( "gibmod_addtolist", ccAddToList )
 					
 
 local valueStore = {}
@@ -293,6 +316,8 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 	if not explosionsEnabled:GetBool() then return end
 	if onlyDeadRagdolls:GetBool() and not ent.GibMod_DeathRag then return end
 	
+	if TableContainsPartial( nonGibbableModels, ent:GetModel() ) then return end
+	
 	-- if it's an npc, get them off the screen
 	if not ent:IsPlayer() then
 		ent:Fire( "kill", "", 0 )
@@ -342,7 +367,6 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 			origin:GetPhysicsObject():ApplyForceCenter( force )
 			
 			origin.IsOrigin = true
-			--timer.Simple( 0.1, function() origin.DoneSim = false end )
 				
 		timer.Simple( effectTime:GetInt(), function() GibMod_KillTimer( origin ) end )
 		
@@ -410,6 +434,7 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 			
 			if isExplosionDamage then
 				phys:ApplyForceCenter( damageForce * 0.25 )
+				chunk:Ignite( math.Rand( 8, 10 ), 0 )
 			end
 			
 		phys:AddVelocity( vel )
@@ -804,7 +829,7 @@ function GibMod_EntityTakeDamage( ent, dmginfo, force )
 	local damageForce = dmginfo:GetDamageForce()
 
 	-- check if the entity or model is nongibbable
-	if not TableContains( nonGibbableEnts, ent:GetClass() ) and not TableContainsPartial( nonGibbableModels, ent:GetModel() ) then
+	if not TableContains( nonGibbableEnts, ent:GetClass() ) then
 		if ent:IsPlayer() or ent:IsNPC() then		
 			-- if we're dead...
 			if (ent:Health() - damageAmt) <= 0 or ent:Health() <= 0 then

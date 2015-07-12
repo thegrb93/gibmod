@@ -37,6 +37,18 @@ command | arguments | description
 gibmod_clean | --- | Immediately cleans all viscera off the map
 gibmod_getvalue | key | Prints internal value of key
 gibmod_setvalue | key, val | Prints internal value of key to second arg
+gibmod_addtolist | listname, val | Adds string to one of the lists below, see developer seciton for string syntax
+
+---
+
+listname | corresponding function
+--- | ---
+ignored_entity | GibMod_AddIgnoredEntityName
+ignored_model | GibMod_AddIgnoredModelString
+bodygib | GibMod_AddBodyGib
+headgib | GibMod_AddHeadGib
+
+---
 
 ## for developers
 ```lua
