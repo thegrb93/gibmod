@@ -1,0 +1,9 @@
+{
+	"title"		:	"GibMod V2",
+	"type"		:	"tool",
+	"tags"		:	[ "fun", "realism" ],
+	"ignore"	:
+	[
+		"*.gma"
+	]
+}
