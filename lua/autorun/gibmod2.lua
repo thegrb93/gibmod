@@ -1,3 +1,6 @@
+-- turn vanilla ragdolls off
+RunConsoleCommand( "ai_serverragdolls", "0" )
+
 if CLIENT then
 	local gibmodEnabled = CreateConVar( "gibmod_enabled", "1", { FCVAR_ARCHIVE, FCVAR_DEMO, FCVAR_REPLICATED } )
 	local effectTime = CreateConVar( "gibmod_effecttime", "60", { FCVAR_ARCHIVE, FCVAR_DEMO, FCVAR_REPLICATED } )
@@ -31,27 +34,45 @@ if CLIENT then
 	
 	function GibMod_CSEffect( len )
 		local effect_type = net.ReadDouble()
-		local pos = net.ReadVector()
 		
+		-- small mist (dismember)
 		if effect_type == 1 then
+			local pos = net.ReadVector()
+			
 			local ef = EffectData()
 				ef:SetOrigin( pos )
 				ef:SetAngles( Angle( 0.25, 10, 1 ) )
 				ef:SetScale( 1.5 )
 			util.Effect( "gib_mist", ef )
+			
+		-- big mist (explode)
 		elseif effect_type == 2 then
+			local pos = net.ReadVector()
+			
 			local ef = EffectData()
 				ef:SetOrigin( pos )
 				ef:SetAngles( Angle( 150, 100, 5 ) )
 				ef:SetScale( 7 )
 			util.Effect( "gib_mist", ef )
+			
+		-- head burst
 		elseif effect_type == 3 then
+			local pos = net.ReadVector()
 			local vel = net.ReadVector()
 			
 			local ef = EffectData()
 				ef:SetOrigin( pos )
 				ef:SetNormal( vel )
 			util.Effect( "gib_burst", ef )
+			
+		-- spray
+		elseif effect_type == 4 then
+			local entid = net.ReadDouble()
+			local boneid = net.ReadDouble()
+			
+			local ef = EffectData()
+				ef:SetNormal( Vector( entid, boneid, 0 ) )
+			util.Effect( "gib_spray", ef )
 		end
 	end
 	net.Receive( "gibmod_cseffect", GibMod_CSEffect )
@@ -76,6 +97,14 @@ end
 
 print("GibMod2 Server Initialized")
 
+local noticeShown = false
+local function showNotice( ply )
+	if noticeShown then return end
+	noticeShown = true
+	PrintMessage( HUD_PRINTTALK, "Welcome to GibMod. If you are experiencing performance issues, please try enabling performance mode with 'gibmod_perfmode 1' in console. Have fun!" )
+end
+hook.Add( "PlayerInitialSpawn", "gibmodShowNotice", showNotice )
+
 AddCSLuaFile( "autorun/gibmod2.lua" )
 resource.AddFile( "materials/gibmod/bloodstream.vmt" )
 
@@ -86,7 +115,7 @@ local nonGibbableEnts = {	-- entity names we ignore completely and don't make ra
 							"npc_dog",
 						}
 						  
-local nonGibbableModels = {	-- partial model names to not explore or dismember
+local nonGibbableModels = {	-- partial model names to not explode or dismember
 							"antlion",
 							"hunter",
 							"combine_strider",
@@ -116,21 +145,81 @@ local headGibs = {	-- head gibs for headshot head explosion
 					"models/props_junk/watermelon01_chunk02c.mdl",
 					}
 					
-local centralExplodeForce = 6500 -- force required to explode a ragdoll when hit in a central bone
-local explodeForce = 12000 -- force required to explode a ragdoll
-local explosionDamage = 100 -- damage required for an explosion to explode a ragdoll
-local limbDamage = 24 -- damage required to dismember a limb
-local headcrabVolume = 35 -- max distance from damage position to headcrab origin to be considered a hit on the headcrab
---local childExplodeThreshold = 40 -- max number of child bones a bone can dismember to explode the entire ragdoll
-local childExplodePercent = 0.5 -- percent of all bones one bone can child-dismember to explode the entire ragdoll
+function GibMod_AddIgnoredEntityName( name )
+	table.insert( nonGibbableEnts, name )
+end
 
-local minGibs = 12 -- min number of body gibs
-local maxGibs = 24 -- max number of body gibs
-local numHgibs = 6 -- number of headshot gibs
+function GibMod_AddIgnoredModelString( name )
+	table.insert( nonGibbableModels, name )
+end
 
-local numBloodStreams = 14 -- number of blood streams
-local bloodStreamLength = 200 -- length of blood streams
-local bloodStreamVariance = 100 -- length will be random -variance -> +variance
+function GibMod_AddBodyGib( name )
+	table.insert( bodyGibs, name )
+end
+
+function GibMod_AddHeadGib( name )
+	table.insert( headGibs, name )
+end
+					
+
+local valueStore = {}
+					
+valueStore['centralexplodeForce'] = 6500 -- force required to explode a ragdoll when hit in a central bone
+valueStore['explodeForce'] = 12000 -- force required to explode a ragdoll
+valueStore['explosionDamage'] = 100 -- damage required for an explosion to explode a ragdoll
+valueStore['limbDamage'] = 24 -- damage required to dismember a limb
+valueStore['headcrabVolume'] = 35 -- max distance from damage position to headcrab origin to be considered a hit on the headcrab
+valueStore['childExplodePercent'] = 0.5 -- percent of all bones one bone can child-dismember to explode the entire ragdoll
+
+valueStore['minGibs'] = 12 -- min number of body gibs
+valueStore['maxGibs'] = 24 -- max number of body gibs
+valueStore['numHgibs'] = 6 -- number of headshot gibs
+
+valueStore['numBloodStreams'] = 14 -- number of blood streams
+valueStore['bloodStreamLength'] = 250 -- length of blood streams
+valueStore['bloodStreamVariance'] = 100 -- length will be random -variance -> +variance
+valueStore['originWeight'] = 500 -- weight of blood stream origin
+valueStore['originForce'] = -4000 -- downward force to apply to blood stream origin
+
+-- from http://lua-users.org/wiki/CopyTable
+local function shallowcopy(orig)
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        copy = {}
+        for orig_key, orig_value in pairs(orig) do
+            copy[orig_key] = orig_value
+        end
+    else -- number, string, boolean, etc
+        copy = orig
+    end
+    return copy
+end
+local defaultValueStore = shallowcopy( valueStore )
+
+function GibMod_SetValue( key, value )
+	valueStore[key] = value
+end
+
+function GibMod_GetValue( key )
+	return valueStore[key]
+end
+
+local function ccSetValue( ply, cmd, args )
+	if not ply:IsAdmin() then return end
+	GibMod_SetValue( args[1], args[2] )
+	ply:PrintMessage( HUD_PRINTCONSOLE, args[1] .. " = " .. args[2] )
+end
+concommand.Add( "gibmod_setvalue", ccSetValue )
+
+local function ccGetValue( ply, cmd, args )
+	if not ply:IsAdmin() then return end
+	
+	local val = GibMod_GetValue( args[1] )
+	ply:PrintMessage( HUD_PRINTCONSOLE, args[1] .. " = " .. val )
+end
+concommand.Add( "gibmod_getvalue", ccGetValue )
+
 
 local deathCamEnabled = CreateConVar( "gibmod_deathcam", "1", { FCVAR_ARCHIVE, FCVAR_DEMO, FCVAR_REPLICATED } )
 
@@ -148,9 +237,27 @@ local onlyDeadRagdolls = CreateConVar( "gibmod_onlydeadragdolls", "0", { FCVAR_A
 
 local onlyHS = CreateConVar( "gibmod_onlyhs", "0", { FCVAR_ARCHIVE, FCVAR_DEMO, FCVAR_REPLICATED } )
 
+local perfMode = CreateConVar( "gibmod_perfmode", "0", { FCVAR_ARCHIVE, FCVAR_DEMO, FCVAR_REPLICATED } )
+local perfFactor = CreateConVar( "gibmod_perffactor", "0.4", { FCVAR_ARCHIVE, FCVAR_DEMO, FCVAR_REPLICATED } )
 
--- turn vanilla server ragdolls off
-RunConsoleCommand( "ai_serverragdolls", "0" )
+
+local function modPerfVal( key, mul )
+	valueStore[key] = defaultValueStore[key] * mul
+end
+
+local function perfModeChanged( convar_name, value_old, value_new )
+	local mul = cvars.Number( "gibmod_perffactor" )
+	if convar_name == "gibmod_perfmode" and value_new == "0" then
+		mul = 1
+	end
+	
+	modPerfVal( 'minGibs', mul )
+	modPerfVal( 'maxGibs', mul )
+	modPerfVal( 'numHgibs', mul )
+	modPerfVal( 'numBloodStreams', mul )
+end
+cvars.AddChangeCallback( "gibmod_perfmode", perfModeChanged )
+cvars.AddChangeCallback( "gibmod_perffactor", perfModeChanged )
 
 
 -- helper function to find needle (string) in haystack (table)
@@ -195,7 +302,7 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 	local vel = ent:GetVelocity()
 	
 	-- go down
-	local force = Vector( 0, 0, -4000 )
+	local force = Vector( 0, 0, valueStore['originForce'] )
 	
 	-- a tiny bit above ground
 	local originPos = pos + Vector( 0, 0, 5 )
@@ -220,7 +327,7 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 	
 	for i = 1, numStringExplosions do		
 		if i > 1 then
-			force = Vector( 0, 0, damageForce:Length() )
+			force = Vector( 0, 0, damageForce:Length() * 10 )
 		end
 	
 		local origin = ents.Create( "gib_droplet" )
@@ -231,6 +338,7 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 			origin:SetRenderMode( 1 )
 			origin:Spawn()
 			
+			origin:GetPhysicsObject():SetMass( valueStore['originWeight'] )
 			origin:GetPhysicsObject():ApplyForceCenter( force )
 			
 			origin.IsOrigin = true
@@ -238,7 +346,7 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 				
 		timer.Simple( effectTime:GetInt(), function() GibMod_KillTimer( origin ) end )
 		
-		for i = 1, numBloodStreams / numStringExplosions do
+		for i = 1, valueStore['numBloodStreams'] / numStringExplosions do
 			local droplet = ents.Create( "gib_droplet" )
 				droplet:SetModel("models/Gibs/HGIBS.mdl")
 				droplet:SetPos( pos + Vector( 0, 0, 15 ) )
@@ -250,7 +358,7 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 			droplet.originEnt = origin
 			
 			math.randomseed( math.random() )
-			local len = bloodStreamLength + math.random( -bloodStreamVariance, bloodStreamVariance )
+			local len = valueStore['bloodStreamLength'] + math.random( -valueStore['bloodStreamVariance'], valueStore['bloodStreamVariance'] )
 			local constraint, rope = constraint.Rope( droplet, origin, 0, 0, Vector(0, 0, 0), Vector(0, 0, 0), len, 0, 5000, 12, "gibmod/bloodstream", false )
 			droplet.rope = rope
 				
@@ -276,7 +384,7 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 	
 	-- gib chunks
 	math.randomseed( math.random() )
-	local numGibs = math.random( minGibs, maxGibs )
+	local numGibs = math.random( valueStore['minGibs'], valueStore['maxGibs'] )
 	for i = 1, numGibs do
 		math.randomseed( math.random() )
 		local model = bodyGibs[ math.random(1, table.Count( bodyGibs ) ) ]
@@ -308,7 +416,6 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 			
 		timer.Simple( effectTime:GetInt(), function() GibMod_KillTimer( chunk ) end )
 	end
-	
 	
 	-- blood mist
 	GibMod_SendCSEffect( 2, originPos )
@@ -380,12 +487,6 @@ function GibMod_Dismember( ent, damagePos, damageForce, isExplosionDamage )
 	
 	if onlyHS:GetBool() and not ( string.find( string.lower( ent:GetBoneName( hitBoneObject ) ), "head" ) ) then return end
 	
-	--if ent:GetBoneParent( hitBoneIndex ) == -1 and damageForce:Length() >= explodeForce then
-	--	-- we've shot the root bone, explode it all! muahahahaha!
-	--	GibMod_Explode( ent, damageForce, isExplosionDamage )
-	--	return
-	--end
-	
 	-- make sure we haven't already dismembered this limb...
 	if not ent.GibMod_Bones then ent.GibMod_Bones = {} end
 	if ent.GibMod_Bones[hitBoneObject] then return end
@@ -401,10 +502,9 @@ function GibMod_Dismember( ent, damagePos, damageForce, isExplosionDamage )
 	if bone_table[hitBoneObject] != nil then
 	
 		local childCount = table.Count( bone_table[hitBoneObject] )
-		--if childCount >= childExplodeThreshold then
-		if childCount / ent:GetBoneCount() >= childExplodePercent then
+		if childCount / ent:GetBoneCount() >= valueStore['childExplodePercent'] then
 			-- this is a central bone, just explode the whole thing!
-			if damageForce:Length() >= centralExplodeForce then -- ...but only if we have enough force
+			if damageForce:Length() >= valueStore['centralexplodeForce'] then -- ...but only if we have enough force
 				GibMod_Explode( ent, damageForce, isExplosionDamage )
 			end
 			return
@@ -446,7 +546,7 @@ function GibMod_Dismember( ent, damagePos, damageForce, isExplosionDamage )
 		GibMod_SendCSEffect( 3, damagePos, damageForce )
 		
 		-- gibs
-		for i = 1, numHgibs do
+		for i = 1, valueStore['numHgibs'] do
 			math.randomseed( math.random() )
 			local model = headGibs[ math.random(1, table.Count( headGibs ) ) ]
 		
@@ -477,22 +577,12 @@ function GibMod_Dismember( ent, damagePos, damageForce, isExplosionDamage )
 	-- blood mist
 	GibMod_SendCSEffect( 1, damagePos )
 	
-	-- spray		
-	local spray = ents.Create( "gib_spray" )
-		spray:SetPos( hitBonePhys:GetPos() )
-		spray:SetAngles( hitBonePhys:GetAngles() )
-		
-		spray:SetModel("models/Gibs/HGIBS.mdl")
-		spray:SetColor( Color( 200, 200, 200, 0 ) )
-		spray:SetRenderMode( 1 )
-		
-		spray:SetParent( ent )
-		spray:Spawn()
-		
-		spray:SetNWEntity( "parent", ent )
-		spray:SetNWInt( "boneid", hitBoneIndex )
-				
-	timer.Simple( sprayTime:GetInt(), function() GibMod_KillTimer( spray ) end )
+	-- spray	
+	net.Start( "gibmod_cseffect" )
+		net.WriteDouble( 4 )
+		net.WriteDouble( ent:EntIndex() )
+		net.WriteDouble( hitBoneIndex )
+	net.Broadcast()
 end
 
 function GibMod_DeathRagdoll( ent, damageForce, damagePos )	
@@ -553,6 +643,8 @@ function GibMod_DeathRagdoll( ent, damageForce, damagePos )
 	if ent:IsPlayer() then
 		ent:SetNetworkedEntity( "gbm_deathrag", ragdoll )
 	end
+	
+	return ragdoll
 end
 
 function GibMod_DeathSound( ent )
@@ -644,7 +736,7 @@ function GibMod_SpawnHeadcrab( ent, damageForce, damagePos )
 	ragdoll:SetVelocity( ent:GetVelocity() )
 	local vel = Vector(-500, 0, 400)
 	-- if damagePos is on the headcrab directly, use damageForce
-	if ragdoll:WorldToLocal( damagePos ):Length() <= headcrabVolume then
+	if ragdoll:WorldToLocal( damagePos ):Length() <= valueStore['headcrabVolume'] then
 		vel = damageForce + Vector(0, 0, 200)
 	end
 	ragdoll:GetPhysicsObject():ApplyForceCenter( vel )
@@ -698,9 +790,13 @@ function GibMod_HandleDeath( ent, damageForce, damagePos )
 	end
 end
 
-function GibMod_EntityTakeDamage( ent, dmginfo )
+function GibMod_EntityTakeDamage( ent, dmginfo, force )
 	if not gibmodEnabled:GetBool() then return end
 	if ent:IsPlayer() and ( string.find( gmod.GetGamemode().FolderName, 'terror' ) ) then return end
+	
+	-- attempt to solve incompatibilities
+	if ent:IsPlayer() and not force then return end
+	if ent:IsNPC() and not force then return end
 	
 	local attacker = dmginfo:GetAttacker()
 	local damageAmt = dmginfo:GetDamage()
@@ -719,11 +815,16 @@ function GibMod_EntityTakeDamage( ent, dmginfo )
 				-- stuff to do regardless of death condition
 				GibMod_HandleDeath( ent, damageForce, damagePos )
 
+				local exploded = false
+				local rag = nil
 				if dmginfo:IsExplosionDamage() or dmginfo:IsFallDamage() then
 					GibMod_Explode( ent, damageForce, dmginfo:IsExplosionDamage() )
+					exploded = true
 				else
-					GibMod_DeathRagdoll( ent, damageForce, damagePos )
+					rag = GibMod_DeathRagdoll( ent, damageForce, damagePos )					
 				end
+				
+				hook.Call( 'GibModEntityDeath', GAMEMODE, ent, exploded, rag )
 			end
 		elseif ent:GetClass() == "prop_ragdoll" then
 			-- if its explosive, set it on fire
@@ -732,13 +833,13 @@ function GibMod_EntityTakeDamage( ent, dmginfo )
 			end
 		
 			-- check if the damage force is enough to explode the ragdoll
-			if damageForce:Length() >= explodeForce and not dmginfo:IsExplosionDamage() then
+			if damageForce:Length() >= valueStore['explodeForce'] and not dmginfo:IsExplosionDamage() then
 				GibMod_Explode( ent, damageForce, dmginfo:IsExplosionDamage() )
 				return
 			end
 			
 			-- otherwise, do it by the book
-			if dmginfo:IsExplosionDamage() and damageAmt >= explosionDamage then
+			if dmginfo:IsExplosionDamage() and damageAmt >= valueStore['explosionDamage'] then
 				GibMod_Explode( ent, damageForce, true )
 			else
 				local hitBoneIndex = GetClosestBone( ent, damagePos )
@@ -749,7 +850,7 @@ function GibMod_EntityTakeDamage( ent, dmginfo )
 				
 				ent.GibMod_BoneDamage[hitBoneObject] = ent.GibMod_BoneDamage[hitBoneObject] + damageAmt
 	
-				if ent.GibMod_BoneDamage[hitBoneObject] >= limbDamage then
+				if ent.GibMod_BoneDamage[hitBoneObject] >= valueStore['limbDamage'] then
 					GibMod_Dismember( ent, damagePos, damageForce, dmginfo:IsExplosionDamage() )
 				end
 			end
@@ -767,8 +868,6 @@ function GibMod_DoPlayerDeath( ply, attacker, dmginfo )
 			
 			local damagePos = dmginfo:GetDamagePosition()
 			local damageForce = dmginfo:GetDamageForce()
-			
-			print( ply.server_ragdoll )
 	
 			GibMod_Dismember( ply.server_ragdoll, damagePos, damageForce, dmginfo:IsExplosionDamage() )
 			
@@ -784,7 +883,7 @@ function GibMod_DoPlayerDeath( ply, attacker, dmginfo )
 				end
 			end
 			
-			GibMod_EntityTakeDamage( ply, dmginfo )
+			GibMod_EntityTakeDamage( ply, dmginfo, true )
 			
 			return true
 		end
@@ -802,7 +901,7 @@ function GibMod_ScaleNPCDamage( ent, hitgroup, dmginfo )
 		if not TableContains( nonGibbableEnts, ent:GetClass() ) then
 			if (ent:Health() - damageAmt) <= 0 then				
 				-- do things manually
-				GibMod_EntityTakeDamage( ent, dmginfo )
+				GibMod_EntityTakeDamage( ent, dmginfo, true )
 				
 				-- don't you dare do your own thing!
 				return true
@@ -835,7 +934,7 @@ function GibMod_Clean( ply, cmd, args )
 	
 	for k, v in pairs( ents.GetAll() ) do
 		-- remove blood streams and gibs
-		if v:GetClass() == "gib_droplet" or v:GetClass() == "gib_chunk" or v:GetClass() == "gib_spray" then
+		if v:GetClass() == "gib_droplet" or v:GetClass() == "gib_chunk" then
 			GibMod_KillTimer( v )
 		end
 		
