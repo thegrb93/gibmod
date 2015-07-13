@@ -20,7 +20,6 @@ function EFFECT:Init( data )
 			velMul = 0.5
 		end
 		
-		math.randomseed( math.random() )
 		particle:SetVelocity( (VectorRand() * 200) + ( Vel * velMul ) + Vector( 0, 0, math.random(-300, 300) ) )
 		particle:SetGravity( Vector( 0, 0, -450 ) )
 		

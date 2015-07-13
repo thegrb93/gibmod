@@ -394,25 +394,20 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 				
 			droplet.originEnt = origin
 			
-			math.randomseed( math.random() )
 			local len = valueStore['bloodStreamLength'] + math.random( -valueStore['bloodStreamVariance'], valueStore['bloodStreamVariance'] )
 			local constraint, rope = constraint.Rope( droplet, origin, 0, 0, Vector(0, 0, 0), Vector(0, 0, 0), len, 0, 5000, 12, "gibmod/bloodstream", false )
 			droplet.rope = rope
 				
 			local phys = droplet:GetPhysicsObject()
-				local sidewaysVel = 2500
-				
-				math.randomseed( math.random() )
-				local randomX = math.random(-1, 1)
-				math.randomseed( math.random() )
-				local randomY = math.random(-1, 1)
-				math.randomseed( math.random() )
-				
 				phys:ApplyForceCenter( Vector( sidewaysVel * randomX, sidewaysVel * randomY, math.random(4000, 5000) ) )
 				
 				if isExplosionDamage then
 					phys:ApplyForceCenter( damageForce * 0.25 )
 				end
+			local sidewaysVel = 2500
+			
+			local randomX = math.random(-1, 1)
+			local randomY = math.random(-1, 1)
 				
 			timer.Simple( effectTime:GetInt(), function() GibMod_KillTimer( droplet ) end )
 		end
@@ -420,10 +415,8 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 
 	
 	-- gib chunks
-	math.randomseed( math.random() )
 	local numGibs = math.random( valueStore['minGibs'], valueStore['maxGibs'] )
 	for i = 1, numGibs do
-		math.randomseed( math.random() )
 		local model = bodyGibs[ math.random(1, table.Count( bodyGibs ) ) ]
 	
 		local chunk = ents.Create( "gib_chunk" )
@@ -437,11 +430,8 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 		local phys = chunk:GetPhysicsObject()
 			local sidewaysVel = 1000
 			
-			math.randomseed( math.random() )
 			local randomX = math.random(-1, 1)
-			math.randomseed( math.random() )
 			local randomY = math.random(-1, 1)
-			math.randomseed( math.random() )
 			
 			phys:ApplyForceCenter( Vector( sidewaysVel * randomX, sidewaysVel * randomY, math.random(700, 1000) ) )
 			
@@ -587,7 +577,6 @@ function GibMod_Dismember( ent, damagePos, damageForce, isExplosionDamage )
 		
 		-- gibs
 		for i = 1, valueStore['numHgibs'] do
-			math.randomseed( math.random() )
 			local model = headGibs[ math.random(1, table.Count( headGibs ) ) ]
 		
 			local chunk = ents.Create( "gib_chunk" )
@@ -601,11 +590,8 @@ function GibMod_Dismember( ent, damagePos, damageForce, isExplosionDamage )
 				local phys = chunk:GetPhysicsObject()
 				local sidewaysVel = 1000
 				
-				math.randomseed( math.random() )
 				local randomX = math.random(-1,1)
-				math.randomseed( math.random() )
 				local randomY = math.random(-1,1)
-				math.randomseed( math.random() )
 				
 				phys:ApplyForceCenter( Vector( sidewaysVel * randomX, sidewaysVel * randomY, math.random(500, 1000) ) )
 				phys:ApplyForceCenter( damageForce * 0.25 )
@@ -689,8 +675,6 @@ function GibMod_DeathSound( ent )
 	if not deathSoundsEnabled:GetBool() then return end
 	
 	local model = string.lower( ent:GetModel() )
-	
-	math.randomseed( math.random() )
 	
 	local s = "npc/barnacle/neck_snap" .. math.random(1, 2) .. ".wav"
 	
