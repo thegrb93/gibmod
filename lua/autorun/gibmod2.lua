@@ -4,6 +4,7 @@ RunConsoleCommand( "ai_serverragdolls", "0" )
 if CLIENT then
 	local gibmodEnabled = CreateConVar( "gibmod_enabled", "1", { FCVAR_ARCHIVE, FCVAR_DEMO, FCVAR_REPLICATED } )
 	local effectTime = CreateConVar( "gibmod_effecttime", "60", { FCVAR_ARCHIVE, FCVAR_DEMO, FCVAR_REPLICATED } )
+	local sprayTime = CreateConVar( "gibmod_spraytime", "15", { FCVAR_ARCHIVE, FCVAR_DEMO, FCVAR_REPLICATED } )
 	local deathCamEnabled = CreateConVar( "gibmod_deathcam", "1", { FCVAR_ARCHIVE, FCVAR_DEMO, FCVAR_REPLICATED } )
 	
 	function GibMod_CalcView( ply, origin, angle, fov )

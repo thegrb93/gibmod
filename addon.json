@@ -4,6 +4,8 @@
 	"tags"		:	[ "fun", "realism" ],
 	"ignore"	:
 	[
-		"*.gma"
+		"*.gma",
+		".git/*",
+		"README.md"
 	]
 }
