@@ -115,6 +115,7 @@ local GibMod_HandleDeath
 local GibMod_EntityTakeDamage
 local GibMod_DoPlayerDeath
 local GibMod_ScaleNPCDamage
+local GibMod_KilledNPC
 local GibMod_SendCSEffect
 
 AddCSLuaFile( "autorun/gibmod2.lua" )
@@ -331,10 +332,6 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 	if ent.GibMod_Exploded then return end
 	
 	ent.GibMod_Exploded = true
-	-- if it's an npc, get them off the screen
-	if not ent:IsPlayer() then
-		ent:Fire( "kill", "", 0 )
-	end
 	
 	local pos = ent:GetPos()
 	local vel = ent:GetVelocity()
@@ -362,6 +359,8 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 			numStringExplosions = 2
 		end
 	end
+	
+	ent:Remove()
 	
 	for i = 1, numStringExplosions do		
 		if i > 1 then
@@ -394,18 +393,19 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 				
 			droplet.originEnt = origin
 			
-			math.randomseed( math.random() )
 			local len = valueStore['bloodStreamLength'] + math.random( -valueStore['bloodStreamVariance'], valueStore['bloodStreamVariance'] )
 			local constraint, rope = constraint.Rope( droplet, origin, 0, 0, Vector(0, 0, 0), Vector(0, 0, 0), len, 0, 5000, 12, "gibmod/bloodstream", false )
 			droplet.rope = rope
 				
 			local phys = droplet:GetPhysicsObject()
+
 			local sidewaysVel = 2500
 			
 			local randomX = math.random(-1, 1)
 			local randomY = math.random(-1, 1)
-			
+
 			phys:ApplyForceCenter( Vector( sidewaysVel * randomX, sidewaysVel * randomY, math.random(1000, 2000) ) + damageForce * 0.25 )
+
 				
 			timer.Simple( effectTime:GetInt(), function() GibMod_KillTimer( droplet ) end )
 		end
@@ -413,10 +413,8 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 
 	
 	-- gib chunks
-	math.randomseed( math.random() )
 	local numGibs = math.random( valueStore['minGibs'], valueStore['maxGibs'] )
 	for i = 1, numGibs do
-		math.randomseed( math.random() )
 		local model = bodyGibs[ math.random(1, table.Count( bodyGibs ) ) ]
 	
 		local chunk = ents.Create( "gib_chunk" )
@@ -430,11 +428,8 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 		local phys = chunk:GetPhysicsObject()
 			local sidewaysVel = 1000
 			
-			math.randomseed( math.random() )
 			local randomX = math.random(-1, 1)
-			math.randomseed( math.random() )
 			local randomY = math.random(-1, 1)
-			math.randomseed( math.random() )
 			
 			phys:ApplyForceCenter( Vector( sidewaysVel * randomX, sidewaysVel * randomY, math.random(700, 1000) ) + damageForce * 0.25 )
 			
@@ -579,7 +574,6 @@ function GibMod_Dismember( ent, damagePos, damageForce, isExplosionDamage )
 		
 		-- gibs
 		for i = 1, valueStore['numHgibs'] do
-			math.randomseed( math.random() )
 			local model = headGibs[ math.random(1, table.Count( headGibs ) ) ]
 		
 			local chunk = ents.Create( "gib_chunk" )
@@ -593,11 +587,8 @@ function GibMod_Dismember( ent, damagePos, damageForce, isExplosionDamage )
 				local phys = chunk:GetPhysicsObject()
 				local sidewaysVel = 1000
 				
-				math.randomseed( math.random() )
 				local randomX = math.random(-1,1)
-				math.randomseed( math.random() )
 				local randomY = math.random(-1,1)
-				math.randomseed( math.random() )
 				
 				phys:ApplyForceCenter( Vector( sidewaysVel * randomX, sidewaysVel * randomY, math.random(500, 1000) ) )
 				phys:ApplyForceCenter( damageForce * 0.25 )
@@ -681,8 +672,6 @@ function GibMod_DeathSound( ent )
 	if not deathSoundsEnabled:GetBool() then return end
 	
 	local model = string.lower( ent:GetModel() )
-	
-	math.randomseed( math.random() )
 	
 	local s = "npc/barnacle/neck_snap" .. math.random(1, 2) .. ".wav"
 	
@@ -832,25 +821,24 @@ function GibMod_EntityTakeDamage( ent, dmginfo, force )
 		-- check if the damage force is enough to explode the ragdoll
 		if damageForce:Length() >= valueStore['explodeForce'] and not dmginfo:IsExplosionDamage() then
 			GibMod_Explode( ent, damageForce, dmginfo:IsExplosionDamage() )
-			return
-		end
-		
-		-- otherwise, do it by the book
-		local damageAmt = dmginfo:GetDamage()
-		if dmginfo:IsExplosionDamage() and damageAmt >= valueStore['explosionDamage'] then
-			GibMod_Explode( ent, damageForce, true )
 		else
-			local damagePos = dmginfo:GetDamagePosition()
-			local hitBoneIndex = GetClosestBone( ent, damagePos )
-			local hitBoneObject = ent:TranslatePhysBoneToBone( hitBoneIndex )
-			
-			if not ent.GibMod_BoneDamage then ent.GibMod_BoneDamage = {} end
-			if not ent.GibMod_BoneDamage[hitBoneObject] then ent.GibMod_BoneDamage[hitBoneObject] = 0 end
-			
-			ent.GibMod_BoneDamage[hitBoneObject] = ent.GibMod_BoneDamage[hitBoneObject] + damageAmt
+			-- otherwise, do it by the book
+			local damageAmt = dmginfo:GetDamage()
+			if dmginfo:IsExplosionDamage() and damageAmt >= valueStore['explosionDamage'] then
+				GibMod_Explode( ent, damageForce, true )
+			else
+				local damagePos = dmginfo:GetDamagePosition()
+				local hitBoneIndex = GetClosestBone( ent, damagePos )
+				local hitBoneObject = ent:TranslatePhysBoneToBone( hitBoneIndex )
+				
+				if not ent.GibMod_BoneDamage then ent.GibMod_BoneDamage = {} end
+				if not ent.GibMod_BoneDamage[hitBoneObject] then ent.GibMod_BoneDamage[hitBoneObject] = 0 end
+				
+				ent.GibMod_BoneDamage[hitBoneObject] = ent.GibMod_BoneDamage[hitBoneObject] + damageAmt
 
-			if ent.GibMod_BoneDamage[hitBoneObject] >= valueStore['limbDamage'] then
-				GibMod_Dismember( ent, damagePos, damageForce, dmginfo:IsExplosionDamage() )
+				if ent.GibMod_BoneDamage[hitBoneObject] >= valueStore['limbDamage'] then
+					GibMod_Dismember( ent, damagePos, damageForce, dmginfo:IsExplosionDamage() )
+				end
 			end
 		end
 	end
@@ -888,24 +876,24 @@ hook.Add( "DoPlayerDeath", "Gib_PlayerDeath", GibMod_DoPlayerDeath )
 
 function GibMod_ScaleNPCDamage( ent, hitgroup, dmginfo )	
 	-- necessary to override vanilla ragdolls and weapon drop
-	
-	if gibmodEnabled:GetBool() then	
-		local damageAmt = dmginfo:GetDamage()
-		
-		-- check if the entity or model is nongibbable
-		if not TableContains( nonGibbableEnts, ent:GetClass() ) then
-			if not ent.GibMod_Killed and (ent:Health() - damageAmt) <= 0 then				
-				-- do things manually
-				ent.GibMod_Killed = true
-				GibMod_HandleDeath( ent, dmginfo )
-				
-				-- don't you dare do your own thing!
-				return true
-			end			
-		end
+	if not gibmodEnabled:GetBool() then return end
+	-- check if the entity or model is nongibbable
+	if not TableContains( nonGibbableEnts, ent:GetClass() ) then
+		ent.GibMod_Damage = dmginfo
+		-- don't you dare do your own thing!
+		return true
 	end
 end
+
+function GibMod_KilledNPC( npc )
+	if not gibmodEnabled:GetBool() then return end
+	if npc.GibMod_Damage then
+		GibMod_HandleDeath( npc, npc.GibMod_Damage )
+	end
+end
+
 --hook.Add( "ScaleNPCDamage", "Gib_ScaleNpcDmg", GibMod_ScaleNPCDamage )
+--hook.Add( "OnNPCKilled", "Gib_KilledNPC", GibMod_KilledNPC )
 
 function GibMod_SendCSEffect( effect_type, pos, vel )
 	net.Start( "gibmod_cseffect" )

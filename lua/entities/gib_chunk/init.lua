@@ -12,11 +12,10 @@ function ENT:Initialize()
 	self:SetCollisionGroup( COLLISION_GROUP_DEBRIS )
 end
  	
-function ENT:PhysicsCollide( data, physobj )	
+function ENT:PhysicsCollide( data, physobj )
 	if not self.Sounded then
 		self.Sounded = true
 		-- sound
-		math.randomseed( math.random() )
 		local rand = math.random(1,5)
 		local sound = "physics/flesh/flesh_squishy_impact_hard1.wav"
 		

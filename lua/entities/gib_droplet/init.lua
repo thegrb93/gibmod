@@ -21,7 +21,6 @@ function ENT:PhysicsCollide( data, physobj )
 	if data.HitEntity.GibMod_IsHeadCrab then return end
 	
 	-- sound
-	math.randomseed( math.random() )
 	local rand = math.random(1,5)
 	local sound = "physics/flesh/flesh_squishy_impact_hard1.wav"
 	
@@ -46,7 +45,6 @@ function ENT:PhysicsCollide( data, physobj )
 	
 	-- weld and sag
 	if not data.HitEntity:IsPlayer() then
-		math.randomseed( math.random() )
 		if math.random() > attachChance and not self.IsOrigin then return end
 		
 		timer.Simple( 0, function() constraint.Weld( self.Entity, data.HitEntity, 0, 0, 0, false, false ) end )
