@@ -398,13 +398,7 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 			droplet.rope = rope
 				
 			local phys = droplet:GetPhysicsObject()
-
-			local sidewaysVel = 2500
-			
-			local randomX = math.random(-1, 1)
-			local randomY = math.random(-1, 1)
-
-			phys:ApplyForceCenter( Vector( sidewaysVel * randomX, sidewaysVel * randomY, math.random(1000, 2000) ) + damageForce * 0.25 )
+			phys:ApplyForceCenter( VectorRand() * math.random(2000, 3500) + damageForce * 0.25 )
 
 				
 			timer.Simple( effectTime:GetInt(), function() GibMod_KillTimer( droplet ) end )
@@ -425,17 +419,12 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 			chunk:Spawn()
 			util.SpriteTrail( chunk, 0, Color( 255, 100, 100, 255 ), false, 10, 1, 0.5, 1 / (( 10+1 ) * 0.5 ), "gibmod/bloodstream.vmt" )
 			
-		local phys = chunk:GetPhysicsObject()
-			local sidewaysVel = 1000
-			
-			local randomX = math.random(-1, 1)
-			local randomY = math.random(-1, 1)
-			
-			phys:ApplyForceCenter( Vector( sidewaysVel * randomX, sidewaysVel * randomY, math.random(700, 1000) ) + damageForce * 0.25 )
-			
-			if isExplosionDamage then
-				chunk:Ignite( math.Rand( 8, 10 ), 0 )
-			end
+		local phys = chunk:GetPhysicsObject()		
+		phys:ApplyForceCenter( VectorRand() * math.random(300, 600) + damageForce * 0.1 )
+		
+		if isExplosionDamage then
+			chunk:Ignite( math.Rand( 8, 10 ), 0 )
+		end
 			
 		phys:AddVelocity( vel )
 			
