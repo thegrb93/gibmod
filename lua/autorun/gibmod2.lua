@@ -365,7 +365,7 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 	
 	for i = 1, numStringExplosions do		
 		if i > 1 then
-			force = Vector( 0, 0, damageForce:Length() * 10 )
+			force = Vector( 0, 0, 1000 )
 		end
 	
 		local origin = ents.Create( "gib_droplet" )
@@ -400,19 +400,12 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 			droplet.rope = rope
 				
 			local phys = droplet:GetPhysicsObject()
-				local sidewaysVel = 2500
-				
-				math.randomseed( math.random() )
-				local randomX = math.random(-1, 1)
-				math.randomseed( math.random() )
-				local randomY = math.random(-1, 1)
-				math.randomseed( math.random() )
-				
-				phys:ApplyForceCenter( Vector( sidewaysVel * randomX, sidewaysVel * randomY, math.random(4000, 5000) ) )
-				
-				if isExplosionDamage then
-					phys:ApplyForceCenter( damageForce * 0.25 )
-				end
+			local sidewaysVel = 2500
+			
+			local randomX = math.random(-1, 1)
+			local randomY = math.random(-1, 1)
+			
+			phys:ApplyForceCenter( Vector( sidewaysVel * randomX, sidewaysVel * randomY, math.random(1000, 2000) ) + damageForce * 0.25 )
 				
 			timer.Simple( effectTime:GetInt(), function() GibMod_KillTimer( droplet ) end )
 		end
@@ -443,10 +436,9 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 			local randomY = math.random(-1, 1)
 			math.randomseed( math.random() )
 			
-			phys:ApplyForceCenter( Vector( sidewaysVel * randomX, sidewaysVel * randomY, math.random(700, 1000) ) )
+			phys:ApplyForceCenter( Vector( sidewaysVel * randomX, sidewaysVel * randomY, math.random(700, 1000) ) + damageForce * 0.25 )
 			
 			if isExplosionDamage then
-				phys:ApplyForceCenter( damageForce * 0.25 )
 				chunk:Ignite( math.Rand( 8, 10 ), 0 )
 			end
 			
@@ -813,14 +805,14 @@ function GibMod_HandleDeath( ent, dmginfo )
 	GibMod_DeathSound( ent )
 	
 	-- npcs drop weapons in base gmod
-	if ent:IsPlayer() then
+	--[[if ent:IsPlayer() then
 		GibMod_DropWeapon( ent, dmginfo:GetDamageForce() )
-	end
+	end]]
 	
 	-- if it's a zombie, make a headcrab!
-	if string.find( string.lower( ent:GetModel() ), "zombie/" ) then
+	--[[if string.find( string.lower( ent:GetModel() ), "zombie/" ) then
 		GibMod_SpawnHeadcrab( ent, dmginfo:GetDamageForce(), dmginfo:GetDamagePosition() )
-	end
+	end]]
 	
 	local rag = GibMod_DeathRagdoll( ent, dmginfo )
 	hook.Call( 'GibModEntityDeath', GAMEMODE, ent, rag:IsValid(), rag )
@@ -913,7 +905,7 @@ function GibMod_ScaleNPCDamage( ent, hitgroup, dmginfo )
 		end
 	end
 end
-hook.Add( "ScaleNPCDamage", "Gib_ScaleNpcDmg", GibMod_ScaleNPCDamage )
+--hook.Add( "ScaleNPCDamage", "Gib_ScaleNpcDmg", GibMod_ScaleNPCDamage )
 
 function GibMod_SendCSEffect( effect_type, pos, vel )
 	net.Start( "gibmod_cseffect" )
