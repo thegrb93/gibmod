@@ -327,9 +327,10 @@ end
 function GibMod_Explode( ent, damageForce, isExplosionDamage )
 	if not explosionsEnabled:GetBool() then return end
 	if onlyDeadRagdolls:GetBool() and not ent.GibMod_DeathRag then return end
-	
 	if TableContainsPartial( nonGibbableModels, ent:GetModel() ) then return end
+	if ent.GibMod_Exploded then return end
 	
+	ent.GibMod_Exploded = true
 	-- if it's an npc, get them off the screen
 	if not ent:IsPlayer() then
 		ent:Fire( "kill", "", 0 )
@@ -828,40 +829,36 @@ end
 function GibMod_EntityTakeDamage( ent, dmginfo, force )
 	if not gibmodEnabled:GetBool() then return end
 	
-	local attacker = dmginfo:GetAttacker()
-	local damageAmt = dmginfo:GetDamage()
-	local damagePos = dmginfo:GetDamagePosition()
-	local damageForce = dmginfo:GetDamageForce()
-
 	-- check if the entity or model is nongibbable
-	if not TableContains( nonGibbableEnts, ent:GetClass() ) then
-		if ent:GetClass() == "prop_ragdoll" then
-			-- if its explosive, set it on fire
-			if dmginfo:IsExplosionDamage() then
-				ent:Ignite( math.Rand( 8, 10 ), 0 )
-			end
-		
-			-- check if the damage force is enough to explode the ragdoll
-			if damageForce:Length() >= valueStore['explodeForce'] and not dmginfo:IsExplosionDamage() then
-				GibMod_Explode( ent, damageForce, dmginfo:IsExplosionDamage() )
-				return
-			end
-			
-			-- otherwise, do it by the book
-			if dmginfo:IsExplosionDamage() and damageAmt >= valueStore['explosionDamage'] then
-				GibMod_Explode( ent, damageForce, true )
-			else
-				local hitBoneIndex = GetClosestBone( ent, damagePos )
-				local hitBoneObject = ent:TranslatePhysBoneToBone( hitBoneIndex )
-				
-				if not ent.GibMod_BoneDamage then ent.GibMod_BoneDamage = {} end
-				if not ent.GibMod_BoneDamage[hitBoneObject] then ent.GibMod_BoneDamage[hitBoneObject] = 0 end
-				
-				ent.GibMod_BoneDamage[hitBoneObject] = ent.GibMod_BoneDamage[hitBoneObject] + damageAmt
+	if ent:GetClass() == "prop_ragdoll" and not TableContains( nonGibbableEnts, ent:GetClass() ) then
+		-- if its explosive, set it on fire
+		if dmginfo:IsExplosionDamage() then
+			ent:Ignite( math.Rand( 8, 10 ), 0 )
+		end
 	
-				if ent.GibMod_BoneDamage[hitBoneObject] >= valueStore['limbDamage'] then
-					GibMod_Dismember( ent, damagePos, damageForce, dmginfo:IsExplosionDamage() )
-				end
+		local damageForce = dmginfo:GetDamageForce()
+		-- check if the damage force is enough to explode the ragdoll
+		if damageForce:Length() >= valueStore['explodeForce'] and not dmginfo:IsExplosionDamage() then
+			GibMod_Explode( ent, damageForce, dmginfo:IsExplosionDamage() )
+			return
+		end
+		
+		-- otherwise, do it by the book
+		local damageAmt = dmginfo:GetDamage()
+		if dmginfo:IsExplosionDamage() and damageAmt >= valueStore['explosionDamage'] then
+			GibMod_Explode( ent, damageForce, true )
+		else
+			local damagePos = dmginfo:GetDamagePosition()
+			local hitBoneIndex = GetClosestBone( ent, damagePos )
+			local hitBoneObject = ent:TranslatePhysBoneToBone( hitBoneIndex )
+			
+			if not ent.GibMod_BoneDamage then ent.GibMod_BoneDamage = {} end
+			if not ent.GibMod_BoneDamage[hitBoneObject] then ent.GibMod_BoneDamage[hitBoneObject] = 0 end
+			
+			ent.GibMod_BoneDamage[hitBoneObject] = ent.GibMod_BoneDamage[hitBoneObject] + damageAmt
+
+			if ent.GibMod_BoneDamage[hitBoneObject] >= valueStore['limbDamage'] then
+				GibMod_Dismember( ent, damagePos, damageForce, dmginfo:IsExplosionDamage() )
 			end
 		end
 	end
@@ -874,11 +871,8 @@ function GibMod_DoPlayerDeath( ply, attacker, dmginfo )
 	if gibmodEnabled:GetBool() then
 		if ( string.find( gmod.GetGamemode().FolderName, 'terror' ) ) then
 			gmod.GetGamemode():DoPlayerDeath( ply, attacker, dmginfo )
-			
-			local damagePos = dmginfo:GetDamagePosition()
-			local damageForce = dmginfo:GetDamageForce()
 	
-			GibMod_Dismember( ply.server_ragdoll, damagePos, damageForce, dmginfo:IsExplosionDamage() )
+			GibMod_Dismember( ply.server_ragdoll, dmginfo:GetDamagePosition(), dmginfo:GetDamageForce(), dmginfo:IsExplosionDamage() )
 			
 			return true
 		else
