@@ -436,7 +436,7 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 			
 			if isExplosionDamage then
 				phys:ApplyForceCenter( damageForce * 0.25 )
-				chunk:Ignite( math.Rand( 8, 10 ), 0 )
+				chunk:Ignite( math.Rand( 8, 10 ), 20 )
 			end
 			
 		phys:AddVelocity( vel )
@@ -637,7 +637,7 @@ function GibMod_DeathRagdoll( ent, dmginfo )
 	ragdoll:SetSkin( ent:GetSkin() )  
     ragdoll:SetColor( ent:GetColor() )  
     ragdoll:SetMaterial( ent:GetMaterial() )  
-    if ent:IsOnFire() then ragdoll:Ignite( math.Rand( 8, 10 ), 0 ) end  
+    if ent:IsOnFire() then ragdoll:Ignite( math.Rand( 8, 10 ), 20 ) end  
 	
 	-- delete the ragdoll after a certain period of time
 	timer.Simple( ragdollTime:GetInt(), function() GibMod_KillTimer( ragdoll ) end )
@@ -755,7 +755,7 @@ function GibMod_SpawnHeadcrab( ent, damageForce, damagePos )
 	ragdoll:SetSkin( ent:GetSkin() )  
 	ragdoll:SetColor( ent:GetColor() )  
 	ragdoll:SetMaterial( ent:GetMaterial() )  
-	if ent:IsOnFire() then ragdoll:Ignite( math.Rand( 8, 10 ), 0 ) end  
+	if ent:IsOnFire() then ragdoll:Ignite( math.Rand( 8, 10 ), 20 ) end  
 	
 	-- set the ragdoll in motion
 	ragdoll:SetVelocity( ent:GetVelocity() )
@@ -816,7 +816,7 @@ function GibMod_EntityTakeDamage( ent, dmginfo, force )
 	if ent:GetClass() == "prop_ragdoll" and not TableContains( nonGibbableEnts, ent:GetClass() ) then
 		-- if its explosive, set it on fire
 		if dmginfo:IsExplosionDamage() then
-			ent:Ignite( math.Rand( 8, 10 ), 0 )
+			ent:Ignite( math.Rand( 8, 10 ), 20 )
 		end
 	
 		local damageForce = dmginfo:GetDamageForce()
