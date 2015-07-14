@@ -105,12 +105,6 @@ local function showNotice( ply )
 	PrintMessage( HUD_PRINTTALK, "Welcome to GibMod. If you are experiencing performance issues, please try enabling performance mode with 'gibmod_perfmode 1' in console. Have fun!" )
 end
 hook.Add( "PlayerInitialSpawn", "gibmodShowNotice", showNotice )
-local GibMod_AddIgnoredEntityName
-local GibMod_AddIgnoredModelString
-local GibMod_AddBodyGib
-local GibMod_AddHeadGib
-local GibMod_SetValue
-local GibMod_GetValue
 local GibMod_Explode
 local GibMod_Dismember
 local GibMod_DeathRagdoll
