@@ -98,12 +98,6 @@ RunConsoleCommand( "ai_serverragdolls", "0" )
 
 print("GibMod2 Server Initialized")
 
-local GibMod_AddIgnoredEntityName
-local GibMod_AddIgnoredModelString
-local GibMod_AddBodyGib
-local GibMod_AddHeadGib
-local GibMod_SetValue
-local GibMod_GetValue
 local GibMod_Explode
 local GibMod_Dismember
 local GibMod_DeathRagdoll
@@ -243,7 +237,7 @@ end
 
 local function ccSetValue( ply, cmd, args )
 	if ply:IsValid() and not ply:IsAdmin() then return end
-	GibMod_SetValue( args[1], args[2] )
+	GibMod_SetValue( args[1], tonumber(args[2]) )
 	ply:PrintMessage( HUD_PRINTCONSOLE, args[1] .. " = " .. args[2] )
 end
 concommand.Add( "gibmod_setvalue", ccSetValue )
@@ -347,6 +341,8 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 		originPos = originPos + Vector( 0, 0, -30 )
 	end
 	
+	ent:Remove()
+	
 	-- stringy stuff
 	local numStringExplosions = 1
 	
@@ -360,7 +356,6 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 		end
 	end
 	
-	ent:Remove()
 	
 	for i = 1, numStringExplosions do		
 		if i > 1 then
@@ -423,7 +418,7 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 		phys:ApplyForceCenter( VectorRand() * math.random(300, 600) + damageForce * 0.1 )
 		
 		if isExplosionDamage then
-			chunk:Ignite( math.Rand( 8, 10 ), 0 )
+			chunk:Ignite( math.Rand( 8, 10 ), 20 )
 		end
 			
 		phys:AddVelocity( vel )
@@ -607,6 +602,10 @@ function GibMod_DeathRagdoll( ent, dmginfo )
 		ragdoll.GibMod_Parent = ent
 		ragdoll:Spawn()
 	
+	local entvel = ent:GetVelocity()
+	if ent:IsPlayer() then
+		entvel = entvel - dmginfo:GetDamageForce() / 40
+	end
 	-- copy bone positions
 	for i = 0, ent:GetBoneCount() - 1 do
 		local bone = ragdoll:GetPhysicsObjectNum( i )
@@ -616,7 +615,7 @@ function GibMod_DeathRagdoll( ent, dmginfo )
 
             bone:SetPos( bonepos )
             bone:SetAngles( boneang )
-			bone:SetVelocity( ent:GetVelocity() )
+			bone:SetVelocity( entvel )
         end
     end
 	
@@ -624,7 +623,7 @@ function GibMod_DeathRagdoll( ent, dmginfo )
 	ragdoll:SetSkin( ent:GetSkin() )  
     ragdoll:SetColor( ent:GetColor() )  
     ragdoll:SetMaterial( ent:GetMaterial() )  
-    if ent:IsOnFire() then ragdoll:Ignite( math.Rand( 8, 10 ), 0 ) end  
+    if ent:IsOnFire() then ragdoll:Ignite( math.Rand( 8, 10 ), 20 ) end  
 	
 	-- delete the ragdoll after a certain period of time
 	timer.Simple( ragdollTime:GetInt(), function() GibMod_KillTimer( ragdoll ) end )
@@ -652,6 +651,7 @@ function GibMod_DeathRagdoll( ent, dmginfo )
 		ent:Fire( "kill", "", 0 )
 	end
 	
+	ragdoll:GetPhysicsObjectNum( GetClosestBone( ragdoll, dmginfo:GetDamagePosition() ) ):ApplyForceCenter( dmginfo:GetDamageForce() )
 	ragdoll:TakeDamageInfo( dmginfo )
 		
 	return ragdoll
@@ -742,7 +742,7 @@ function GibMod_SpawnHeadcrab( ent, damageForce, damagePos )
 	ragdoll:SetSkin( ent:GetSkin() )  
 	ragdoll:SetColor( ent:GetColor() )  
 	ragdoll:SetMaterial( ent:GetMaterial() )  
-	if ent:IsOnFire() then ragdoll:Ignite( math.Rand( 8, 10 ), 0 ) end  
+	if ent:IsOnFire() then ragdoll:Ignite( math.Rand( 8, 10 ), 20 ) end  
 	
 	-- set the ragdoll in motion
 	ragdoll:SetVelocity( ent:GetVelocity() )
@@ -800,10 +800,10 @@ function GibMod_EntityTakeDamage( ent, dmginfo, force )
 	if not gibmodEnabled:GetBool() then return end
 	
 	-- check if the entity or model is nongibbable
-	if ent:GetClass() == "prop_ragdoll" and not TableContains( nonGibbableEnts, ent:GetClass() ) then
+	if ent:GetClass() == "prop_ragdoll" then
 		-- if its explosive, set it on fire
 		if dmginfo:IsExplosionDamage() then
-			ent:Ignite( math.Rand( 8, 10 ), 0 )
+			ent:Ignite( math.Rand( 8, 10 ), 20 )
 		end
 	
 		local damageForce = dmginfo:GetDamageForce()
@@ -868,7 +868,10 @@ function GibMod_ScaleNPCDamage( ent, hitgroup, dmginfo )
 	if not gibmodEnabled:GetBool() then return end
 	-- check if the entity or model is nongibbable
 	if not TableContains( nonGibbableEnts, ent:GetClass() ) then
-		ent.GibMod_Damage = dmginfo
+		ent.GibMod_Damage = DamageInfo()
+		ent.GibMod_Damage:SetDamage( dmginfo:GetDamage() )
+		ent.GibMod_Damage:SetDamagePosition( dmginfo:GetDamagePosition() )
+		ent.GibMod_Damage:SetDamageForce( dmginfo:GetDamageForce() )
 		-- don't you dare do your own thing!
 		return true
 	end
