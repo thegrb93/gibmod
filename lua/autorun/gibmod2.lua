@@ -861,7 +861,7 @@ function GibMod_DoPlayerDeath( ply, attacker, dmginfo )
 		end
 	end
 end
-hook.Add( "DoPlayerDeath", "Gib_PlayerDeath", GibMod_DoPlayerDeath )
+hook.Add( "Initialize", "Gib_PlayerDeath", function() function GAMEMODE:DoPlayerDeath(...) GibMod_DoPlayerDeath(...) end end)
 
 function GibMod_ScaleNPCDamage( ent, hitgroup, dmginfo )	
 	-- necessary to override vanilla ragdolls and weapon drop
