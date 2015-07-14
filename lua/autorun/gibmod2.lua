@@ -194,8 +194,8 @@ concommand.Add( "gibmod_addtolist", ccAddToList )
 
 local valueStore = {}
 					
-valueStore['centralexplodeForce'] = 6500 -- force required to explode a ragdoll when hit in a central bone
-valueStore['explodeForce'] = 12000 -- force required to explode a ragdoll
+valueStore['centralexplodeForce'] = 12000 -- force required to explode a ragdoll when hit in a central bone
+valueStore['explodeForce'] = 14000 -- force required to explode a ragdoll
 valueStore['explosionDamage'] = 100 -- damage required for an explosion to explode a ragdoll
 valueStore['limbDamage'] = 24 -- damage required to dismember a limb
 valueStore['headcrabVolume'] = 35 -- max distance from damage position to headcrab origin to be considered a hit on the headcrab
