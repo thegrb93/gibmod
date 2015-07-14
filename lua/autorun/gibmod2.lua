@@ -244,7 +244,7 @@ end
 
 local function ccSetValue( ply, cmd, args )
 	if ply:IsValid() and not ply:IsAdmin() then return end
-	GibMod_SetValue( args[1], args[2] )
+	GibMod_SetValue( args[1], tonumber(args[2]) )
 	ply:PrintMessage( HUD_PRINTCONSOLE, args[1] .. " = " .. args[2] )
 end
 concommand.Add( "gibmod_setvalue", ccSetValue )
