@@ -398,16 +398,17 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 			local constraint, rope = constraint.Rope( droplet, origin, 0, 0, Vector(0, 0, 0), Vector(0, 0, 0), len, 0, 5000, 12, "gibmod/bloodstream", false )
 			droplet.rope = rope
 				
-			local phys = droplet:GetPhysicsObject()
-				phys:ApplyForceCenter( Vector( sidewaysVel * randomX, sidewaysVel * randomY, math.random(4000, 5000) ) )
-				
-				if isExplosionDamage then
-					phys:ApplyForceCenter( damageForce * 0.25 )
-				end
 			local sidewaysVel = 2500
 			
 			local randomX = math.random(-1, 1)
 			local randomY = math.random(-1, 1)
+			
+			local phys = droplet:GetPhysicsObject()
+			phys:ApplyForceCenter( Vector( sidewaysVel * randomX, sidewaysVel * randomY, math.random(4000, 5000) ) )
+			
+			if isExplosionDamage then
+				phys:ApplyForceCenter( damageForce * 0.25 )
+			end
 				
 			timer.Simple( effectTime:GetInt(), function() GibMod_KillTimer( droplet ) end )
 		end
