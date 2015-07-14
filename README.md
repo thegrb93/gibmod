@@ -33,6 +33,7 @@ gibmod_onlyhs | 1 or 0 | Only enable the headshot effect | 0
 gibmod_effecttime | 0 to # | How many seconds generic effects last before they're removed  | 90
 gibmod_spraytime | 0 to # | How many seconds blood spray effects last | 15
 gibmod_ragdolltime | 0 to # | How many seconds ragdolls of dead players and npcs stick around for | 60
+gibmod_maxsplatsounds | 0 to # | How many times gibs can emit splat sounds (0 is infinite) | 0
 
 ---
 
