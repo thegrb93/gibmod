@@ -98,8 +98,10 @@ end
 
 print("GibMod2 Server Initialized")
 
+local noticeDisabled = CreateConVar( "gibmod_disableperfnotice", "0", { FCVAR_ARCHIVE, FCVAR_DEMO } )
 local noticeShown = false
 local function showNotice( ply )
+	if noticeDisabled:GetBool() then return end
 	if noticeShown then return end
 	noticeShown = true
 	PrintMessage( HUD_PRINTTALK, "Welcome to GibMod. If you are experiencing performance issues, please try enabling performance mode with 'gibmod_perfmode 1' in console. Have fun!" )
