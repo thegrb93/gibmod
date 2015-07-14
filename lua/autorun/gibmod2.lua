@@ -348,6 +348,8 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 		originPos = originPos + Vector( 0, 0, -30 )
 	end
 	
+	ent:Remove()
+	
 	-- stringy stuff
 	local numStringExplosions = 1
 	
@@ -361,7 +363,6 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 		end
 	end
 	
-	ent:Remove()
 	
 	for i = 1, numStringExplosions do		
 		if i > 1 then
