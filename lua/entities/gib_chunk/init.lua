@@ -14,7 +14,6 @@ end
  	
 function ENT:PhysicsCollide( data, physobj )	
 	-- sound
-	math.randomseed( math.random() )
 	local rand = math.random(1,5)
 	local sound = "physics/flesh/flesh_squishy_impact_hard1.wav"
 	
