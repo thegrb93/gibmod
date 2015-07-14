@@ -623,6 +623,10 @@ function GibMod_DeathRagdoll( ent, dmginfo )
 		ragdoll.GibMod_Parent = ent
 		ragdoll:Spawn()
 	
+	local entvel = ent:GetVelocity()
+	if ent:IsPlayer() then
+		entvel = entvel - dmginfo:GetDamageForce() / 40
+	end
 	-- copy bone positions
 	for i = 0, ent:GetBoneCount() - 1 do
 		local bone = ragdoll:GetPhysicsObjectNum( i )
@@ -632,7 +636,7 @@ function GibMod_DeathRagdoll( ent, dmginfo )
 
             bone:SetPos( bonepos )
             bone:SetAngles( boneang )
-			bone:SetVelocity( ent:GetVelocity() )
+			bone:SetVelocity( entvel )
         end
     end
 	
@@ -668,6 +672,7 @@ function GibMod_DeathRagdoll( ent, dmginfo )
 		ent:Fire( "kill", "", 0 )
 	end
 	
+	ragdoll:GetPhysicsObjectNum( GetClosestBone( ragdoll, dmginfo:GetDamagePosition() ) ):ApplyForceCenter( dmginfo:GetDamageForce() )
 	ragdoll:TakeDamageInfo( dmginfo )
 		
 	return ragdoll
@@ -816,7 +821,7 @@ function GibMod_EntityTakeDamage( ent, dmginfo, force )
 	if not gibmodEnabled:GetBool() then return end
 	
 	-- check if the entity or model is nongibbable
-	if ent:GetClass() == "prop_ragdoll" and not TableContains( nonGibbableEnts, ent:GetClass() ) then
+	if ent:GetClass() == "prop_ragdoll" then
 		-- if its explosive, set it on fire
 		if dmginfo:IsExplosionDamage() then
 			ent:Ignite( math.Rand( 8, 10 ), 20 )
@@ -884,7 +889,10 @@ function GibMod_ScaleNPCDamage( ent, hitgroup, dmginfo )
 	if not gibmodEnabled:GetBool() then return end
 	-- check if the entity or model is nongibbable
 	if not TableContains( nonGibbableEnts, ent:GetClass() ) then
-		ent.GibMod_Damage = dmginfo
+		ent.GibMod_Damage = DamageInfo()
+		ent.GibMod_Damage:SetDamage( dmginfo:GetDamage() )
+		ent.GibMod_Damage:SetDamagePosition( dmginfo:GetDamagePosition() )
+		ent.GibMod_Damage:SetDamageForce( dmginfo:GetDamageForce() )
 		-- don't you dare do your own thing!
 		return true
 	end
