@@ -196,7 +196,7 @@ local valueStore = {}
 					
 valueStore['centralexplodeForce'] = 12000 -- force required to explode a ragdoll when hit in a central bone
 valueStore['explodeForce'] = 14000 -- force required to explode a ragdoll
-valueStore['explosionDamage'] = 100 -- damage required for an explosion to explode a ragdoll
+valueStore['explosionDamage'] = 30 -- damage required for an explosion to explode a ragdoll
 valueStore['limbDamage'] = 24 -- damage required to dismember a limb
 valueStore['headcrabVolume'] = 35 -- max distance from damage position to headcrab origin to be considered a hit on the headcrab
 valueStore['childExplodePercent'] = 0.5 -- percent of all bones one bone can child-dismember to explode the entire ragdoll
@@ -630,14 +630,6 @@ function GibMod_DeathRagdoll( ent, dmginfo )
 	
 	-- add to the player's undo list
 	if ent:IsPlayer() then
-		if ent.AddCleanup ~= nil then
-			ent:AddCleanup( "ragdolls", ragdoll )
-		end
-		undo.Create("Death Ragdoll")
-		undo.AddEntity( ragdoll )
-		undo.SetPlayer( ent )
-		undo.Finish()
-		
 		if deathCamEnabled:GetBool() then
 			ent:SetNetworkedEntity( "gbm_deathrag", ragdoll )
 		else
@@ -651,7 +643,7 @@ function GibMod_DeathRagdoll( ent, dmginfo )
 		ent:Fire( "kill", "", 0 )
 	end
 	
-	ragdoll:GetPhysicsObjectNum( GetClosestBone( ragdoll, dmginfo:GetDamagePosition() ) ):ApplyForceCenter( dmginfo:GetDamageForce() )
+	ragdoll:GetPhysicsObjectNum( GetClosestBone( ragdoll, dmginfo:GetDamagePosition() ) ):ApplyForceCenter( dmginfo:GetDamageForce()*2 )
 	ragdoll:TakeDamageInfo( dmginfo )
 		
 	return ragdoll
