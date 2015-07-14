@@ -98,6 +98,13 @@ RunConsoleCommand( "ai_serverragdolls", "0" )
 
 print("GibMod2 Server Initialized")
 
+local noticeShown = false
+local function showNotice( ply )
+	if noticeShown then return end
+	noticeShown = true
+	PrintMessage( HUD_PRINTTALK, "Welcome to GibMod. If you are experiencing performance issues, please try enabling performance mode with 'gibmod_perfmode 1' in console. Have fun!" )
+end
+hook.Add( "PlayerInitialSpawn", "gibmodShowNotice", showNotice )
 local GibMod_AddIgnoredEntityName
 local GibMod_AddIgnoredModelString
 local GibMod_AddBodyGib
