@@ -107,6 +107,7 @@ local function showNotice( ply )
 	PrintMessage( HUD_PRINTTALK, "Welcome to GibMod. If you are experiencing performance issues, please try enabling performance mode with 'gibmod_perfmode 1' in console. Have fun!" )
 end
 hook.Add( "PlayerInitialSpawn", "gibmodShowNotice", showNotice )
+
 local GibMod_Explode
 local GibMod_Dismember
 local GibMod_DeathRagdoll
@@ -853,6 +854,8 @@ function GibMod_EntityTakeDamage( ent, dmginfo, force )
 				end
 			end
 		end
+	elseif ent:IsNPC() then
+		SetGibModDamage( ent, dmginfo )
 	end
 end
 hook.Add( "EntityTakeDamage", "Gib_EntDamage", GibMod_EntityTakeDamage )
@@ -886,19 +889,24 @@ function GibMod_DoPlayerDeath( ply, attacker, dmginfo )
 end
 hook.Add( "DoPlayerDeath", "Gib_PlayerDeath", GibMod_DoPlayerDeath )
 
+local function SetGibModDamage( ent, dmginfo )
+	ent.GibMod_Damage = DamageInfo()
+	ent.GibMod_Damage:SetDamage( dmginfo:GetDamage() )
+	ent.GibMod_Damage:SetDamagePosition( dmginfo:GetDamagePosition() )
+	ent.GibMod_Damage:SetDamageForce( dmginfo:GetDamageForce() )
+end
+
 function GibMod_ScaleNPCDamage( ent, hitgroup, dmginfo )	
 	-- necessary to override vanilla ragdolls and weapon drop
 	if not gibmodEnabled:GetBool() then return end
 	-- check if the entity or model is nongibbable
 	if not TableContains( nonGibbableEnts, ent:GetClass() ) then
-		ent.GibMod_Damage = DamageInfo()
-		ent.GibMod_Damage:SetDamage( dmginfo:GetDamage() )
-		ent.GibMod_Damage:SetDamagePosition( dmginfo:GetDamagePosition() )
-		ent.GibMod_Damage:SetDamageForce( dmginfo:GetDamageForce() )
+		SetGibModDamage( ent, dmginfo )
 		-- don't you dare do your own thing!
 		return true
 	end
 end
+hook.Add( "ScaleNPCDamage", "Gib_ScaleNpcDmg", GibMod_ScaleNPCDamage )
 
 function GibMod_KilledNPC( npc )
 	if not gibmodEnabled:GetBool() then return end
@@ -906,8 +914,6 @@ function GibMod_KilledNPC( npc )
 		GibMod_HandleDeath( npc, npc.GibMod_Damage )
 	end
 end
-
-hook.Add( "ScaleNPCDamage", "Gib_ScaleNpcDmg", GibMod_ScaleNPCDamage )
 hook.Add( "OnNPCKilled", "Gib_KilledNPC", GibMod_KilledNPC )
 
 function GibMod_SendCSEffect( effect_type, pos, vel )
