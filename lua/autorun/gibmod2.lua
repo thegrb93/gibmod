@@ -118,6 +118,7 @@ local GibMod_DropWeapon
 local GibMod_HandleDeath
 local GibMod_EntityTakeDamage
 local GibMod_DoPlayerDeath
+local SetGibModDamage
 local GibMod_ScaleNPCDamage
 local GibMod_KilledNPC
 local GibMod_SendCSEffect
@@ -889,7 +890,7 @@ function GibMod_DoPlayerDeath( ply, attacker, dmginfo )
 end
 hook.Add( "DoPlayerDeath", "Gib_PlayerDeath", GibMod_DoPlayerDeath )
 
-local function SetGibModDamage( ent, dmginfo )
+function SetGibModDamage( ent, dmginfo )
 	ent.GibMod_Damage = DamageInfo()
 	ent.GibMod_Damage:SetDamage( dmginfo:GetDamage() )
 	ent.GibMod_Damage:SetDamagePosition( dmginfo:GetDamagePosition() )
@@ -901,7 +902,6 @@ function GibMod_ScaleNPCDamage( ent, hitgroup, dmginfo )
 	if not gibmodEnabled:GetBool() then return end
 	-- check if the entity or model is nongibbable
 	if not TableContains( nonGibbableEnts, ent:GetClass() ) then
-		SetGibModDamage( ent, dmginfo )
 		-- don't you dare do your own thing!
 		return true
 	end
