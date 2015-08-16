@@ -76,6 +76,27 @@ if CLIENT then
 	end
 	net.Receive( "gibmod_cseffect", GibMod_CSEffect )
 	
+	net.Receive( "gibmod_coloredragdoll", function()
+		local p = net.ReadEntity()
+		if p:IsValid() then
+			local n = net.ReadUInt(16)
+			local retry = false
+			local function setRagdollColor()
+				local e = Entity( n )
+				if e:IsValid() then
+					if p.GetPlayerColor then
+						local col = p:GetPlayerColor()
+						e.GetPlayerColor = function() return col end
+					end
+				elseif not retry then
+					retry = true
+					timer.Simple(0.5, setRagdollColor)
+				end
+			end
+			setRagdollColor()
+		end
+	end)
+	
 	function GibMod_RemoveCSRagdoll( ent )
 		-- forcibly remove clientside ragdolls on creation
 
@@ -623,6 +644,9 @@ function GibMod_DeathRagdoll( ent, dmginfo )
 		ragdoll:SetPos( ent:GetPos() )
 		ragdoll:SetAngles( ent:GetAngles() )
 		ragdoll:SetModel( ent:GetModel() )
+		for _, v in pairs( ent:GetBodyGroups() ) do
+			ragdoll:SetBodygroup( v.id, ent:GetBodygroup( v.id ) )
+		end
 		ragdoll.GibMod_DeathRag = true
 		ragdoll.GibMod_Parent = ent
 		ragdoll:Spawn()
@@ -678,6 +702,11 @@ function GibMod_DeathRagdoll( ent, dmginfo )
 	
 	ragdoll:GetPhysicsObjectNum( GetClosestBone( ragdoll, dmginfo:GetDamagePosition() ) ):ApplyForceCenter( dmginfo:GetDamageForce() )
 	ragdoll:TakeDamageInfo( dmginfo )
+	
+	net.Start("gibmod_coloredragdoll")
+	net.WriteEntity(ent)
+	net.WriteUInt(ragdoll:EntIndex(),16)
+	net.Broadcast()
 		
 	return ragdoll
 end
@@ -928,6 +957,7 @@ function GibMod_SendCSEffect( effect_type, pos, vel )
 	net.Broadcast()
 end
 util.AddNetworkString( "gibmod_cseffect" )
+util.AddNetworkString( "gibmod_coloredragdoll" )
 
 function GibMod_Clean( ply, cmd, args )
 	if ply:IsValid() and not ply:IsAdmin() then return end
