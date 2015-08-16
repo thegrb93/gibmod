@@ -18,17 +18,22 @@ convar | values | description | default
 --- | --- | --- | ---
 gibmod_perfmode | 1 or 0 | Enables or disables performance mode | 0
 gibmod_perffactor | 0 to 1 | Factor to multiply resource-intensive values by | 0.4
+gibmod_disableperfnotice | 1 or 0 | Disables the chat notice about performance mode | 0
+--- | --- | --- | ---
 gibmod_enabled | 1 or 0 | Enables or disables GibMod entirely | 1
 gibmod_deathcam | 1 or 0 | Enables or disables player deathcam | 1
 gibmod_explosions | 1 or 0 | Enables or disables gut/goop explosions | 1
 gibmod_dismemberment | 1 or 0 | Enables or disables limb dismemberment | 1
 gibmod_deathsounds | 1 or 0 | Enables sound effects on death | 1
-gibmod_effecttime | 0 to # | How many seconds generic effects last before they're removed  | 90
-gibmod_spraytime | 0 to # | How many seconds blood spray effects last | 15
-gibmod_ragdolltime | 0 to # | How many seconds ragdolls of dead players and npcs stick around for | 60
+--- | --- | --- | ---
 gibmod_disableplayercollision | 1 or 0 | Disable player collision with ragdolls | 1
 gibmod_onlydeadragdolls | 1 or 0 | If enabled, only ragdolls from dead npcs/players will be affected by GibMod | 0
 gibmod_onlyhs | 1 or 0 | Only enable the headshot effect | 0
+--- | --- | --- | ---
+gibmod_effecttime | 0 to # | How many seconds generic effects last before they're removed  | 90
+gibmod_spraytime | 0 to # | How many seconds blood spray effects last | 15
+gibmod_ragdolltime | 0 to # | How many seconds ragdolls of dead players and npcs stick around for | 60
+gibmod_maxsplatsounds | 0 to # | How many times gibs can emit splat sounds (0 is infinite) | 0
 
 ---
 

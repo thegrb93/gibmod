@@ -3,6 +3,8 @@ AddCSLuaFile( "shared.lua" )
 
 include('shared.lua')
 
+--Maximum splats. 0 for infinite.
+local splatLimit = CreateConVar( "gibmod_maxsplatsounds", "0", { FCVAR_ARCHIVE, FCVAR_DEMO, FCVAR_REPLICATED } )
 
 function ENT:Initialize()		
     self:PhysicsInit( SOLID_VPHYSICS )
@@ -10,12 +12,14 @@ function ENT:Initialize()
     self:SetSolid( SOLID_VPHYSICS )
 	
 	self:SetCollisionGroup( COLLISION_GROUP_DEBRIS )
+	self.SplatSounds = 0
 end
  	
-function ENT:PhysicsCollide( data, physobj )
-	if not self.Sounded then
-		self.Sounded = true
+function ENT:PhysicsCollide( data, physobj )	
+	if splatLimit:GetInt()==0 or self.SplatSounds < splatLimit:GetInt() then
+		self.SplatSounds = self.SplatSounds + 1
 		-- sound
+		math.randomseed( math.random() )
 		local rand = math.random(1,5)
 		local sound = "physics/flesh/flesh_squishy_impact_hard1.wav"
 		

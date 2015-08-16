@@ -76,6 +76,27 @@ if CLIENT then
 	end
 	net.Receive( "gibmod_cseffect", GibMod_CSEffect )
 	
+	net.Receive( "gibmod_coloredragdoll", function()
+		local p = net.ReadEntity()
+		if p:IsValid() then
+			local n = net.ReadUInt(16)
+			local retry = false
+			local function setRagdollColor()
+				local e = Entity( n )
+				if e:IsValid() then
+					if p.GetPlayerColor then
+						local col = p:GetPlayerColor()
+						e.GetPlayerColor = function() return col end
+					end
+				elseif not retry then
+					retry = true
+					timer.Simple(0.5, setRagdollColor)
+				end
+			end
+			setRagdollColor()
+		end
+	end)
+	
 	--[[function GibMod_RemoveCSRagdoll( ent )
 		-- forcibly remove clientside ragdolls on creation
 
@@ -98,6 +119,7 @@ RunConsoleCommand( "ai_serverragdolls", "0" )
 
 print("GibMod2 Server Initialized")
 
+
 local GibMod_Explode
 local GibMod_Dismember
 local GibMod_DeathRagdoll
@@ -108,6 +130,7 @@ local GibMod_DropWeapon
 local GibMod_HandleDeath
 local GibMod_EntityTakeDamage
 local GibMod_DoPlayerDeath
+local SetGibModDamage
 local GibMod_ScaleNPCDamage
 local GibMod_KilledNPC
 local GibMod_SendCSEffect
@@ -391,10 +414,9 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 			local len = valueStore['bloodStreamLength'] + math.random( -valueStore['bloodStreamVariance'], valueStore['bloodStreamVariance'] )
 			local constraint, rope = constraint.Rope( droplet, origin, 0, 0, Vector(0, 0, 0), Vector(0, 0, 0), len, 0, 5000, 12, "gibmod/bloodstream", false )
 			droplet.rope = rope
-				
+			
 			local phys = droplet:GetPhysicsObject()
 			phys:ApplyForceCenter( VectorRand() * math.random(2000, 3500) + damageForce * 0.25 )
-
 				
 			timer.Simple( effectTime:GetInt(), function() GibMod_KillTimer( droplet ) end )
 		end
@@ -598,6 +620,9 @@ function GibMod_DeathRagdoll( ent, dmginfo )
 		ragdoll:SetPos( ent:GetPos() )
 		ragdoll:SetAngles( ent:GetAngles() )
 		ragdoll:SetModel( ent:GetModel() )
+		for _, v in pairs( ent:GetBodyGroups() ) do
+			ragdoll:SetBodygroup( v.id, ent:GetBodygroup( v.id ) )
+		end
 		ragdoll.GibMod_DeathRag = true
 		ragdoll.GibMod_Parent = ent
 		ragdoll:Spawn()
@@ -645,6 +670,11 @@ function GibMod_DeathRagdoll( ent, dmginfo )
 	
 	ragdoll:GetPhysicsObjectNum( GetClosestBone( ragdoll, dmginfo:GetDamagePosition() ) ):ApplyForceCenter( dmginfo:GetDamageForce()*2 )
 	ragdoll:TakeDamageInfo( dmginfo )
+	
+	net.Start("gibmod_coloredragdoll")
+	net.WriteEntity(ent)
+	net.WriteUInt(ragdoll:EntIndex(),16)
+	net.Broadcast()
 		
 	return ragdoll
 end
@@ -822,6 +852,8 @@ function GibMod_EntityTakeDamage( ent, dmginfo, force )
 				end
 			end
 		end
+	elseif ent:IsNPC() then
+		SetGibModDamage( ent, dmginfo )
 	end
 end
 hook.Add( "EntityTakeDamage", "Gib_EntDamage", GibMod_EntityTakeDamage )
@@ -854,6 +886,13 @@ function GibMod_DoPlayerDeath( ply, attacker, dmginfo )
 	end
 end
 hook.Add( "Initialize", "Gib_PlayerDeath", function() function GAMEMODE:DoPlayerDeath(...) GibMod_DoPlayerDeath(...) end end)
+
+function SetGibModDamage( ent, dmginfo )
+	ent.GibMod_Damage = DamageInfo()
+	ent.GibMod_Damage:SetDamage( dmginfo:GetDamage() )
+	ent.GibMod_Damage:SetDamagePosition( dmginfo:GetDamagePosition() )
+	ent.GibMod_Damage:SetDamageForce( dmginfo:GetDamageForce() )
+end
 
 function GibMod_ScaleNPCDamage( ent, hitgroup, dmginfo )	
 	-- necessary to override vanilla ragdolls and weapon drop
@@ -891,6 +930,7 @@ function GibMod_SendCSEffect( effect_type, pos, vel )
 	net.Broadcast()
 end
 util.AddNetworkString( "gibmod_cseffect" )
+util.AddNetworkString( "gibmod_coloredragdoll" )
 
 function GibMod_Clean( ply, cmd, args )
 	if ply:IsValid() and not ply:IsAdmin() then return end
