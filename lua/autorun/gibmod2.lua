@@ -4,7 +4,7 @@ if CLIENT then
 	local sprayTime = CreateConVar( "gibmod_spraytime", "15", { FCVAR_ARCHIVE, FCVAR_DEMO, FCVAR_REPLICATED } )
 	local deathCamEnabled = CreateConVar( "gibmod_deathcam", "1", { FCVAR_ARCHIVE, FCVAR_DEMO, FCVAR_REPLICATED } )
 	
-	function GibMod_CalcView( ply, origin, angle, fov )
+	--[[function GibMod_CalcView( ply, origin, angle, fov )
 		if ply:Alive() then return end
 		if not gibmodEnabled:GetBool() then return end
 		if not deathCamEnabled:GetBool() then return end
@@ -29,7 +29,7 @@ if CLIENT then
 			return view
 		end
 	end
-	hook.Add( "CalcView", "GibMod_CalcView", GibMod_CalcView )
+	hook.Add( "CalcView", "GibMod_CalcView", GibMod_CalcView )]]
 	
 	function GibMod_CSEffect( len )
 		local effect_type = net.ReadDouble()
@@ -76,7 +76,7 @@ if CLIENT then
 	end
 	net.Receive( "gibmod_cseffect", GibMod_CSEffect )
 	
-	function GibMod_RemoveCSRagdoll( ent )
+	--[[function GibMod_RemoveCSRagdoll( ent )
 		-- forcibly remove clientside ragdolls on creation
 
 		if ( ent == NULL ) or ( ent == nil ) then return end
@@ -87,7 +87,7 @@ if CLIENT then
 			end
 		end 	
 	end
-	hook.Add("OnEntityCreated", "Gib_RemoveCSRag", GibMod_RemoveCSRagdoll)
+	hook.Add("OnEntityCreated", "Gib_RemoveCSRag", GibMod_RemoveCSRagdoll)]]
 	
 	print("GibMod2 Client Initialized")
 	return
@@ -327,7 +327,7 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 	
 	ent.GibMod_Exploded = true
 	
-	local pos = ent:GetPos()
+	local pos = ent:GetBonePosition( ent:LookupBone( "ValveBiped.Bip01_Pelvis" ) )
 	local vel = ent:GetVelocity()
 	
 	-- go down
