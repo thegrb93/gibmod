@@ -350,7 +350,7 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 	
 	ent.GibMod_Exploded = true
 	
-	local pos = ent:GetBonePosition( ent:LookupBone( "ValveBiped.Bip01_Pelvis" ) )
+	local pos = ent:GetBonePosition( ent:LookupBone( "ValveBiped.Bip01_Pelvis" ) or 0 )
 	local vel = ent:GetVelocity()
 	
 	-- go down
