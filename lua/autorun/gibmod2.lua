@@ -479,7 +479,7 @@ end
 -- helper function to see what bone we shot
 local function GetClosestBone( ent, pos )
 	local closest_distance = -1
-	local closest_bone = -1
+	local closest_bone = 0
 	
 	for i = 0, ent:GetPhysicsObjectCount() - 1 do
 		local bone = ent:TranslatePhysBoneToBone( i )
