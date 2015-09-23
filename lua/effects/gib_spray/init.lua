@@ -21,7 +21,7 @@ function EFFECT:Think()
 	if ( self.Delay > CurTime() ) then return true end
 	self.Delay = CurTime() + 0.05
 	
-	if ( !IsValid( self.Parent ) ) then
+	if ( !IsValid( self.Parent ) or !IsValid(self.PhysBone) ) then
 		return false
 	end
 	
