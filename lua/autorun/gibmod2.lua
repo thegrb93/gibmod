@@ -700,7 +700,10 @@ function GibMod_DeathRagdoll( ent, dmginfo )
 		ent:Fire( "kill", "", 0 )
 	end
 	
-	ragdoll:GetPhysicsObjectNum( GetClosestBone( ragdoll, dmginfo:GetDamagePosition() ) ):ApplyForceCenter( dmginfo:GetDamageForce() )
+	local physobj = ragdoll:GetPhysicsObjectNum( GetClosestBone( ragdoll, dmginfo:GetDamagePosition() ) )
+	if IsValid( physobj ) then
+		physobj:ApplyForceCenter( dmginfo:GetDamageForce() )
+	end
 	ragdoll:TakeDamageInfo( dmginfo )
 	
 	net.Start("gibmod_coloredragdoll")
