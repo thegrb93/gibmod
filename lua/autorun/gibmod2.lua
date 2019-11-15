@@ -31,72 +31,6 @@ if CLIENT then
 	end
 	hook.Add( "CalcView", "GibMod_CalcView", GibMod_CalcView )]]
 	
-	function GibMod_CSEffect( len )
-		local effect_type = net.ReadDouble()
-		
-		-- small mist (dismember)
-		if effect_type == 1 then
-			local pos = net.ReadVector()
-			
-			local ef = EffectData()
-				ef:SetOrigin( pos )
-				ef:SetAngles( Angle( 0.25, 10, 1 ) )
-				ef:SetScale( 1.5 )
-			util.Effect( "gib_mist", ef )
-			
-		-- big mist (explode)
-		elseif effect_type == 2 then
-			local pos = net.ReadVector()
-			
-			local ef = EffectData()
-				ef:SetOrigin( pos )
-				ef:SetAngles( Angle( 150, 100, 5 ) )
-				ef:SetScale( 7 )
-			util.Effect( "gib_mist", ef )
-			
-		-- head burst
-		elseif effect_type == 3 then
-			local pos = net.ReadVector()
-			local vel = net.ReadVector()
-			
-			local ef = EffectData()
-				ef:SetOrigin( pos )
-				ef:SetNormal( vel )
-			util.Effect( "gib_burst", ef )
-			
-		-- spray
-		elseif effect_type == 4 then
-			local entid = net.ReadDouble()
-			local boneid = net.ReadDouble()
-			
-			local ef = EffectData()
-				ef:SetNormal( Vector( entid, boneid, 0 ) )
-			util.Effect( "gib_spray", ef )
-		end
-	end
-	net.Receive( "gibmod_cseffect", GibMod_CSEffect )
-	
-	net.Receive( "gibmod_coloredragdoll", function()
-		local p = net.ReadEntity()
-		if p:IsValid() then
-			local n = net.ReadUInt(16)
-			local retry = false
-			local function setRagdollColor()
-				local e = Entity( n )
-				if e:IsValid() then
-					if p.GetPlayerColor then
-						local col = p:GetPlayerColor()
-						e.GetPlayerColor = function() return col end
-					end
-				elseif not retry then
-					retry = true
-					timer.Simple(0.5, setRagdollColor)
-				end
-			end
-			setRagdollColor()
-		end
-	end)
-	
 	--[[function GibMod_RemoveCSRagdoll( ent )
 		-- forcibly remove clientside ragdolls on creation
 
@@ -133,7 +67,7 @@ local GibMod_DoPlayerDeath
 local SetGibModDamage
 local GibMod_ScaleNPCDamage
 local GibMod_KilledNPC
-local GibMod_SendCSEffect
+local GibMod_Ragdoll
 
 AddCSLuaFile( "autorun/gibmod2.lua" )
 resource.AddFile( "materials/gibmod/bloodstream.vmt" )
@@ -416,7 +350,7 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 			droplet.rope = rope
 			
 			local phys = droplet:GetPhysicsObject()
-			phys:ApplyForceCenter( VectorRand() * math.random(2000, 3500) + damageForce * 0.25 )
+			phys:ApplyForceCenter( VectorRand() * math.random(2000, 3500) + damageForce * 0.4 )
 				
 			timer.Simple( effectTime:GetInt(), function() GibMod_KillTimer( droplet ) end )
 		end
@@ -425,6 +359,7 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 	
 	-- gib chunks
 	local numGibs = math.random( valueStore['minGibs'], valueStore['maxGibs'] )
+	local specGib = math.random( numGibs )
 	for i = 1, numGibs do
 		local model = bodyGibs[ math.random(1, table.Count( bodyGibs ) ) ]
 	
@@ -435,9 +370,13 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 			chunk:SetColor( 200, 150, 150, 255 )
 			chunk:Spawn()
 			util.SpriteTrail( chunk, 0, Color( 255, 100, 100, 255 ), false, 10, 1, 0.5, 1 / (( 10+1 ) * 0.5 ), "gibmod/bloodstream.vmt" )
-			
+		
+		if i == specGib and IsValid(ent.GibMod_Parent) then
+			ent.GibMod_Parent:SpectateEntity(chunk)
+		end
+		
 		local phys = chunk:GetPhysicsObject()		
-		phys:ApplyForceCenter( VectorRand() * math.random(300, 600) + damageForce * 0.1 )
+		phys:ApplyForceCenter( VectorRand() * math.random(700, 1500) + damageForce * 0.15 )
 		
 		if isExplosionDamage then
 			chunk:Ignite( math.Rand( 8, 10 ), 20 )
@@ -449,7 +388,11 @@ function GibMod_Explode( ent, damageForce, isExplosionDamage )
 	end
 	
 	-- blood mist
-	GibMod_SendCSEffect( 2, originPos )
+	local ef = EffectData()
+		ef:SetOrigin( originPos )
+		ef:SetAngles( Angle( 150, 100, 5 ) )
+		ef:SetScale( 7 )
+	util.Effect( "gib_mist", ef )
 end
 
 -- helper function to see what bone we shot
@@ -576,7 +519,10 @@ function GibMod_Dismember( ent, damagePos, damageForce, isExplosionDamage )
 		sound.Play( "weapons/ar2/npc_ar2_altfire.wav", damagePos )
 		
 		-- burst effect
-		GibMod_SendCSEffect( 3, damagePos, damageForce )
+		--[[local ef = EffectData()
+			ef:SetOrigin( damagePos )
+			ef:SetStart( damageForce )
+		util.Effect( "gib_burst", ef )]]
 		
 		-- gibs
 		for i = 1, valueStore['numHgibs'] do
@@ -603,15 +549,19 @@ function GibMod_Dismember( ent, damagePos, damageForce, isExplosionDamage )
 		end
 	end
 	
-	-- blood mist
-	GibMod_SendCSEffect( 1, damagePos )
+	-- blood mist			
+	local ef = EffectData()
+		ef:SetOrigin( damagePos )
+		ef:SetAngles( Angle( 0.25, 10, 1 ) )
+		ef:SetScale( 1.5 )
+	util.Effect( "gib_mist", ef )
 	
-	-- spray	
-	net.Start( "gibmod_cseffect" )
-		net.WriteDouble( 4 )
-		net.WriteDouble( ent:EntIndex() )
-		net.WriteDouble( hitBoneIndex )
-	net.Broadcast()
+	-- spray
+	local ef = EffectData()
+		ef:SetEntity(ent)
+		ef:SetAttachment(hitBoneIndex)
+	util.Effect( "gib_spray", ef )
+	
 end
 
 function GibMod_DeathRagdoll( ent, dmginfo )	
@@ -846,12 +796,14 @@ function GibMod_EntityTakeDamage( ent, dmginfo, force )
 				local hitBoneObject = ent:TranslatePhysBoneToBone( hitBoneIndex )
 				
 				if not ent.GibMod_BoneDamage then ent.GibMod_BoneDamage = {} end
-				if not ent.GibMod_BoneDamage[hitBoneObject] then ent.GibMod_BoneDamage[hitBoneObject] = 0 end
-				
-				ent.GibMod_BoneDamage[hitBoneObject] = ent.GibMod_BoneDamage[hitBoneObject] + damageAmt
+				if hitBoneObject then
+					if not ent.GibMod_BoneDamage[hitBoneObject] then ent.GibMod_BoneDamage[hitBoneObject] = 0 end
+					
+					ent.GibMod_BoneDamage[hitBoneObject] = ent.GibMod_BoneDamage[hitBoneObject] + damageAmt
 
-				if ent.GibMod_BoneDamage[hitBoneObject] >= valueStore['limbDamage'] then
-					GibMod_Dismember( ent, damagePos, damageForce, dmginfo:IsExplosionDamage() )
+					if ent.GibMod_BoneDamage[hitBoneObject] >= valueStore['limbDamage'] then
+						GibMod_Dismember( ent, damagePos, damageForce, dmginfo:IsExplosionDamage() )
+					end
 				end
 			end
 		end
@@ -916,20 +868,6 @@ end
 
 --hook.Add( "ScaleNPCDamage", "Gib_ScaleNpcDmg", GibMod_ScaleNPCDamage )
 --hook.Add( "OnNPCKilled", "Gib_KilledNPC", GibMod_KilledNPC )
-
-function GibMod_SendCSEffect( effect_type, pos, vel )
-	net.Start( "gibmod_cseffect" )
-		net.WriteDouble( effect_type )
-		net.WriteVector( pos )
-		
-		if effect_type == 3 then
-			net.WriteVector( vel )
-		end
-		
-	net.Broadcast()
-end
-util.AddNetworkString( "gibmod_cseffect" )
-util.AddNetworkString( "gibmod_coloredragdoll" )
 
 function GibMod_Clean( ply, cmd, args )
 	if ply:IsValid() and not ply:IsAdmin() then return end
