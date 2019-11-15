@@ -1,8 +1,8 @@
-local numBurstParts = 500
+local numBurstParts = 50
 
 function EFFECT:Init( data )
 	local Pos = data:GetOrigin()
-	local Vel = data:GetNormal()
+	local Vel = data:GetStart()
 	
 	local emitter = ParticleEmitter( Pos )
 	
@@ -15,31 +15,28 @@ function EFFECT:Init( data )
 		particle:SetCollide( true )
 		particle:SetBounce( 0.025 )
 		
-		local velMul = math.Rand(.05, 0.15)
-		if i < numBurstParts / 8 then
-			velMul = 0.5
-		end
+		local velMul = math.Rand(0, 0.2)
+		--print(( Vel * velMul ))
 		
 		particle:SetVelocity( (VectorRand() * 200) + ( Vel * velMul ) + Vector( 0, 0, math.random(-300, 300) ) )
-		particle:SetGravity( Vector( 0, 0, -450 ) )
+		particle:SetGravity( Vector( 0, 0, -600 ) )
 		
 		particle:SetDieTime( math.Rand( 4, 6 ) )
 		
 		particle:SetStartAlpha( 255 )
-		particle:SetEndAlpha( 50 )
+		particle:SetEndAlpha( 0 )
 		
-		particle:SetStartSize( math.Rand( 1.75, 2.75 ) )
-		particle:SetEndSize( 0 )
+		particle:SetStartSize( math.Rand( 10.75, 20.75 ) )
+		particle:SetEndSize( 10 )
 	end
 		
 	emitter:Finish()
 	
-	self.RunSim = true
-	timer.Simple( GetConVar( "gibmod_effecttime" ):GetInt() + 1, function() self.RunSim = false end)
+	self.RunSim = CurTime() + GetConVar( "gibmod_effecttime" ):GetInt() + 1
 end
 
 function EFFECT:Think()		
-	return self.RunSim
+	return self.RunSim>CurTime()
 end
 
 function EFFECT:Render()
