@@ -53,6 +53,7 @@ RunConsoleCommand( "ai_serverragdolls", "0" )
 
 print("GibMod2 Server Initialized")
 
+util.AddNetworkString("gibmod_coloredragdoll")
 
 local GibMod_Explode
 local GibMod_Dismember
