@@ -30,7 +30,7 @@ function ENT:PhysicsCollide( data, physobj )
 		sound = "physics/flesh/flesh_bloody_break.wav"
 	end
 	
-	self:EmitSound( sound, 100, math.Clamp( math.Clamp( (self:BoundingRadius() * 10), 1, 5000 ) * -1 + 255 + math.random(-5, 5), 50, 255 )  )
+	self:EmitSound( sound, 60, math.Clamp( math.Clamp( (self:BoundingRadius() * 10), 1, 5000 ) * -1 + 255 + math.random(-5, 5), 50, 255 )  )
 	
 	-- blood spurt
 	local effectdata = EffectData()
@@ -47,7 +47,6 @@ function ENT:PhysicsCollide( data, physobj )
 	if not data.HitEntity:IsPlayer() then
 		if math.random() > attachChance and not self.IsOrigin then return end
 		
-		timer.Simple( 0, function() constraint.Weld( self.Entity, data.HitEntity, 0, 0, 0, false, false ) end )
 		self.DoneSim = true
 		
 		if self.rope and self.rope:IsValid() then

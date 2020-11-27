@@ -2,5 +2,5 @@
 {
 	"$basetexture" "effects/bloodstream"
 	"$translucent" 1
-	"$color" [0.2 0 0]
+	"$color" "[0.2 0 0]"
 }

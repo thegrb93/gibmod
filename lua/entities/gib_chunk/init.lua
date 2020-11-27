@@ -29,7 +29,7 @@ function ENT:PhysicsCollide( data, physobj )
 			sound = "physics/flesh/flesh_bloody_break.wav"
 		end
 		
-		self:EmitSound( sound, 50, math.Clamp( math.Clamp( (self:BoundingRadius() * 10), 1, 5000 ) * -1 + 255 + math.random(-5, 5), 50, 255 )  )
+		self:EmitSound( sound, 60, math.Clamp( math.Clamp( (self:BoundingRadius() * 10), 1, 5000 ) * -1 + 255 + math.random(-5, 5), 50, 255 )  )
 	end
 	
 	-- blood spurt

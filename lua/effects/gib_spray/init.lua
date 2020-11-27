@@ -1,10 +1,8 @@
-function EFFECT:Init( data )
-	local myData = data:GetNormal()
-	
-	local ent = ents.GetByIndex( myData.x )
+function EFFECT:Init( data )	
+	local ent = data:GetEntity()
 	
 	self.Parent = ent
-	self.BoneIndex = myData.y
+	self.BoneIndex = data:GetAttachment()
 	
 	if ( self.BoneIndex == nil or !IsValid( self.Parent ) ) then
 		return false
